@@ -3,7 +3,7 @@
 #include "../xlocomotion_descriptor.h"
 #include "../xlocomotion.h"
 #include "plugins/xragdoll.plugin/source/xragdoll.h"
-#include "dependencies/xAnimation/source/adapters/xanimation_pose_student.h"
+#include "dependencies/xAnimation/source/adapters/xanimation_clip_tracker.h"
 
 #include "dependencies/xproperty/source/xcore/my_properties.cpp"
 #include "dependencies/xmath/source/bridge/xmath_to_xproperty.h"
@@ -57,28 +57,33 @@ namespace xlocomotion_compiler
             // the bundle: every file read, the student parsed (sizes) and checked against the body
             displayProgressBar("Reading the bundle", 0);
             const auto Dir = std::filesystem::path(m_ProjectPaths.m_Project) / m_Descriptor.m_Bundle;
+            // the kind (xlocomotion::controller::Kind): student.bin = a pose student, policy.bin = a clip tracker
+            const bool bTracker = !std::filesystem::exists(Dir / "student.bin") && std::filesystem::exists(Dir / "policy.bin");
             std::vector<std::pair<std::string, std::string>> Files;
-            for (const char* pName : xanimation::pose_student::bundle_files_v)
+            auto Take = [&](const auto& Names) { for (const char* pName : Names)
             {
                 std::string B;
-                if (!xanimation::pose_student::ReadFile((Dir / pName).string(), B)) continue;
+                if (!xanimation::policy_body::ReadFile((Dir / pName).string(), B)) continue;
                 m_Dependencies.m_Assets.push_back((std::filesystem::path(m_Descriptor.m_Bundle) / pName).wstring());
                 Files.push_back({ pName, std::move(B) });
-            }
-            xanimation::pose_student S; std::string Why;
-            if (!S.LoadFrom([&](const char* pName, std::string& Out) { for (auto& [N, B] : Files) if (N == pName) { Out = B; return true; } return false; }, Why))
+            } };
+            if (bTracker) Take(xanimation::clip_tracker::bundle_files_v); else Take(xanimation::pose_student::bundle_files_v);
+            auto Reader = [&](const char* pName, std::string& Out) { for (auto& [N, B] : Files) if (N == pName) { Out = B; return true; } return false; };
+            xanimation::pose_student S; xanimation::clip_tracker T; std::string Why;
+            if (!(bTracker ? T.LoadFrom(Reader, Why) : S.LoadFrom(Reader, Why)))
             {
                 LogMessage(xresource_pipeline::msg_type::ERROR, std::format("The bundle in {} is incomplete or malformed: {}", Dir.string(), Why));
                 return xerr::create_f<state, "Bad bundle">();
             }
             std::array<float, 7> G{};
-            if (!S.Gains(0, G)) { LogMessage(xresource_pipeline::msg_type::ERROR, "The bundle has no gains.txt: the drives it was trained with are needed in Play"); return xerr::create_f<state, "No gains">(); }
-            if (std::uint32_t(S.StanceSize()) != nDriven)
+            if (!(bTracker ? T.Gains(0, G) : S.Gains(0, G))) { LogMessage(xresource_pipeline::msg_type::ERROR, "The bundle has no gains.txt: the drives it was trained with are needed in Play"); return xerr::create_f<state, "No gains">(); }
+            const std::size_t nBundle = bTracker ? [&] { std::size_t n = 0; while (T.Gains(n, G)) ++n; return n; }() : S.StanceSize();
+            if (std::uint32_t(nBundle) != nDriven)
             {
-                LogMessage(xresource_pipeline::msg_type::ERROR, std::format("The bundle drives {} joints, the Ragdoll has {} driven (spherical) joints: it was trained on another body", S.StanceSize(), nDriven));
+                LogMessage(xresource_pipeline::msg_type::ERROR, std::format("The bundle drives {} joints, the Ragdoll has {} driven (spherical) joints: it was trained on another body", nBundle, nDriven));
                 return xerr::create_f<state, "Body mismatch">();
             }
-            LogMessage(xresource_pipeline::msg_type::INFO, std::format("pose student: {} driven joints, {} files, contract v{}", nDriven, Files.size(), xlocomotion::controller::contract_version_v));
+            LogMessage(xresource_pipeline::msg_type::INFO, std::format("{}: {} driven joints, {} files, contract v{}", bTracker ? "clip tracker" : "pose student", nDriven, Files.size(), xlocomotion::controller::contract_version_v));
             displayProgressBar("Reading the bundle", 1);
 
             // pack

@@ -3,7 +3,7 @@
 #pragma once
 
 // The compiled Locomotion Controller (Locomotion Editor design: "a learned follower: weights + contract version + body-profile hash; a compiled,
-// versioned RESOURCE"). Today one kind: a POSE STUDENT steering a frozen skill base (xanimation::pose_student). Its files are kept as the trainer
+// versioned RESOURCE"). Two kinds (Kind()): a POSE STUDENT steering a frozen skill base (xanimation::pose_student) or a CLIP TRACKER following an animation (xanimation::clip_tracker). Its files are kept as the trainer
 // wrote them (student.bin, prior.bin, dec.bin, policy.json, stance.txt, gains.txt) and read by pose_student::LoadFrom; the body it was trained on
 // is named (the Ragdoll resource) with its driven-joint count, checked when compiled and again when bound at run time.
 #include "dependencies/xserializer/source/xserializer.h"
@@ -36,6 +36,10 @@ namespace xlocomotion
                 if (std::strncmp(m_pFiles[i].m_Name, pName, sizeof(file::m_Name)) == 0) { Out.assign(reinterpret_cast<const char*>(m_pData) + m_pFiles[i].m_iData, m_pFiles[i].m_nData); return true; }
             return false;
         }
+
+        // the kind, from its files: a pose student (student.bin, xanimation::pose_student) or a clip tracker (policy.bin, xanimation::clip_tracker)
+        enum class kind { POSE_STUDENT, CLIP_TRACKER };
+        kind Kind() const noexcept { std::string B; return Read("student.bin", B) ? kind::POSE_STUDENT : kind::CLIP_TRACKER; }
 
         file*           m_pFiles        {nullptr};
         std::uint8_t*   m_pData         {nullptr};
