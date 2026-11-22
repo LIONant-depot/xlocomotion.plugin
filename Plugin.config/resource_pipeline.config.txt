@@ -1,0 +1,19 @@
+
+// New Types
+< s32:d u32:g s16:C u16:H s8:c u8:h f32:f f64:F string:s wstring:S u64:G s64:D bool:c enum:s >
+
+[ xProperties : 12 ]
+{ Name:s                            Value:?                   }
+//--------------------------------  -------------------------
+  "PipelinePlugin/TypeName"                  ;string "LocomotionController"
+  "PipelinePlugin/Group"                     ;string "Animation"
+  "PipelinePlugin/Description"               ;string "A learned locomotion controller: a trained pose student and its skill base, checked against the Ragdoll it was trained on"
+  "PipelinePlugin/FileExtension"             ;wstring "xlocomotion"
+  "PipelinePlugin/TypeGUID/Value"            ;u64    #493D3469C51F8833
+  "PipelinePlugin/IconPaths[]"               ;s64    1
+  "PipelinePlugin/IconPaths[G:0]"            ;wstring "icon.png"
+  "PipelinePlugin/Details/RunAfter[]"        ;s64    1
+  "PipelinePlugin/Details/RunAfter[G:0]/Value" ;u64    #1BC9DAEB399A8187
+  "PipelinePlugin/Details/CompilationScript" ;wstring "Cache\\Plugins\\xlocomotion.plugin\\Build\\CreateAndBuildProject.bat"
+  "PipelinePlugin/Details/DebugCompiler"     ;wstring "Cache\\Plugins\\xlocomotion.plugin\\Build\\xlocomotion_compiler.vs2022\\Debug\\xlocomotion_compiler.exe"
+  "PipelinePlugin/Details/ReleaseCompiler"   ;wstring "Cache\\Plugins\\xlocomotion.plugin\\Build\\xlocomotion_compiler.vs2022\\Release\\xlocomotion_compiler.exe"
